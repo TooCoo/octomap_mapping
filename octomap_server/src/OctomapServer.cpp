@@ -47,8 +47,8 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_octree(NULL),
   m_maxRange(-1.0),
   m_worldFrameId("/map"), m_baseFrameId("base_footprint"),
-  m_useHeightMap(true),
-  m_useColoredMap(false),
+  m_useHeightMap(false),
+  m_useColoredMap(true),
   m_colorFactor(0.8),
   m_latchedTopics(true),
   m_publishFreeSpace(false),
@@ -121,11 +121,15 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   }
 
   if (m_useColoredMap) {
+      ROS_FATAL("COLOURED MAP REQUESTED");
 #ifdef COLOR_OCTOMAP_SERVER
     ROS_INFO_STREAM("Using RGB color registration (if information available)");
 #else
     ROS_ERROR_STREAM("Colored map requested in launch file - node not running/compiled to support colors, please define COLOR_OCTOMAP_SERVER and recompile or launch the octomap_color_server node");
 #endif
+  } else
+  {
+      ROS_FATAL("NOT USING COLORED MAP");
   }
 
 
@@ -198,7 +202,6 @@ OctomapServer::~OctomapServer(){
     m_pointCloudSub = NULL;
   }
 
-
   if (m_octree){
     delete m_octree;
     m_octree = NULL;
@@ -262,7 +265,6 @@ bool OctomapServer::openFile(const std::string& filename){
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
   ros::WallTime startTime = ros::WallTime::now();
 
-
   //
   // ground filtering in base frame
   //
@@ -279,7 +281,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 
   Eigen::Matrix4f sensorToWorld;
   pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
-
 
   // set up filter for height range, also removes NANs:
   pcl::PassThrough<PCLPoint> pass_x;
@@ -302,12 +303,10 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
       m_tfListener.lookupTransform(m_baseFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToBaseTf);
       m_tfListener.lookupTransform(m_worldFrameId, m_baseFrameId, cloud->header.stamp, baseToWorldTf);
 
-
     }catch(tf::TransformException& ex){
       ROS_ERROR_STREAM( "Transform error for ground plane filter: " << ex.what() << ", quitting callback.\n"
                         "You need to set the base_frame_id or disable filter_ground.");
     }
-
 
     Eigen::Matrix4f sensorToBase, baseToWorld;
     pcl_ros::transformAsMatrix(sensorToBaseTf, sensorToBase);
@@ -535,6 +534,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
         double size = it.getSize();
         double x = it.getX();
         double y = it.getY();
+
 #ifdef COLOR_OCTOMAP_SERVER
         int r = it->getColor().r;
         int g = it->getColor().g;
