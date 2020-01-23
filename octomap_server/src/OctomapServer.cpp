@@ -124,6 +124,11 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
       ROS_FATAL("COLOURED MAP REQUESTED");
 #ifdef COLOR_OCTOMAP_SERVER
     ROS_INFO_STREAM("Using RGB color registration (if information available)");
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+      ROS_FATAL("COLOUR PLUS MAP REQUESTED");
+      ROS_INFO_STREAM("Using RGB color registration (if information available)");
 #else
     ROS_ERROR_STREAM("Colored map requested in launch file - node not running/compiled to support colors, please define COLOR_OCTOMAP_SERVER and recompile or launch the octomap_color_server node");
 #endif
@@ -365,6 +370,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
   unsigned char* colors = new unsigned char[3];
 #endif
 
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+    unsigned char* colors = new unsigned char[3];
+#endif
+
   // instead of direct scan insertion, compute update to filter ground:
   KeySet free_cells, occupied_cells;
   // insert ground points only as free:
@@ -409,6 +418,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
 #ifdef COLOR_OCTOMAP_SERVER // NB: Only read and interpret color if it's an occupied node
         m_octree->averageNodeColor(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER // NB: Only read and interpret color if it's an occupied node
+          m_octree->averageNodeColor(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
 #endif
       }
     } else {// ray longer than maxrange:;
@@ -470,7 +483,15 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     m_octree->prune();
 
 #ifdef COLOR_OCTOMAP_SERVER
-  if (colors)
+    if (colors)
+  {
+    delete[] colors;
+    colors = NULL;
+  }
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+    if (colors)
   {
     delete[] colors;
     colors = NULL;
@@ -536,7 +557,13 @@ void OctomapServer::publishAll(const ros::Time& rostime){
         double y = it.getY();
 
 #ifdef COLOR_OCTOMAP_SERVER
-        int r = it->getColor().r;
+          int r = it->getColor().r;
+        int g = it->getColor().g;
+        int b = it->getColor().b;
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+          int r = it->getColor().r;
         int g = it->getColor().g;
         int b = it->getColor().b;
 #endif
@@ -578,12 +605,26 @@ void OctomapServer::publishAll(const ros::Time& rostime){
             occupiedNodesVis.markers[idx].colors.push_back(_color);
           }
 #endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+            if (m_useColoredMap) {
+            std_msgs::ColorRGBA _color; _color.r = (r / 255.); _color.g = (g / 255.); _color.b = (b / 255.); _color.a = 1.0; // TODO/EVALUATE: potentially use occupancy as measure for alpha channel?
+            occupiedNodesVis.markers[idx].colors.push_back(_color);
+          }
+#endif
         }
 
         // insert into pointcloud:
         if (publishPointCloud) {
 #ifdef COLOR_OCTOMAP_SERVER
-          PCLPoint _point = PCLPoint();
+            PCLPoint _point = PCLPoint();
+          _point.x = x; _point.y = y; _point.z = z;
+          _point.r = r; _point.g = g; _point.b = b;
+          pclCloud.push_back(_point);
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+            PCLPoint _point = PCLPoint();
           _point.x = x; _point.y = y; _point.z = z;
           _point.r = r; _point.g = g; _point.b = b;
           pclCloud.push_back(_point);

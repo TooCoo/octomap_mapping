@@ -68,8 +68,14 @@
 
 //#define COLOR_OCTOMAP_SERVER // switch color here - easier maintenance, only maintain OctomapServer. Two targets are defined in the cmake, octomap_server_color and octomap_server. One has this defined, and the other doesn't
 
+//#define COLOR_PLUS_OCTOMAP_SERVER
+
 #ifdef COLOR_OCTOMAP_SERVER
 #include <octomap/ColorOcTree.h>
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+#include <octomap/ColorPlusOcTree.h>
 #endif
 
 namespace octomap_server {
@@ -80,11 +86,18 @@ public:
   typedef pcl::PointXYZRGB PCLPoint;
   typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
   typedef octomap::ColorOcTree OcTreeT;
+#endif
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+  typedef pcl::PointXYZRGB PCLPoint;
+  typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
+  typedef octomap::ColorOcTree OcTreeT;
 #else
   typedef pcl::PointXYZ PCLPoint;
   typedef pcl::PointCloud<pcl::PointXYZ> PCLPointCloud;
   typedef octomap::OcTree OcTreeT;
 #endif
+
   typedef octomap_msgs::GetOctomap OctomapSrv;
   typedef octomap_msgs::BoundingBoxQuery BBXSrv;
 
