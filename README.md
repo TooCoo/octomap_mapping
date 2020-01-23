@@ -1,3 +1,9 @@
+# NOTE
+
+This is indevelopment and largely untested. The goal of this project is to facilitate an octomap with both color and semantic labels available for each cell.
+
+If this sounds interesting and you want to help let me know.
+
 octomap_mapping
 ===============
 
