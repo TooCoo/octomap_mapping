@@ -82,20 +82,21 @@ namespace octomap_server {
 class OctomapServer {
 
 public:
+
 #ifdef COLOR_OCTOMAP_SERVER
   typedef pcl::PointXYZRGB PCLPoint;
   typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
   typedef octomap::ColorOcTree OcTreeT;
-#endif
-
+#else
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
-  typedef pcl::PointXYZRGB PCLPoint;
-  typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
-  typedef octomap::ColorPlusOcTree OcTreeT;
+        typedef pcl::PointXYZRGB PCLPoint;
+        typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
+        typedef octomap::ColorPlusOcTree OcTreeT;
 #else
   typedef pcl::PointXYZ PCLPoint;
   typedef pcl::PointCloud<pcl::PointXYZ> PCLPointCloud;
   typedef octomap::OcTree OcTreeT;
+#endif
 #endif
 
   typedef octomap_msgs::GetOctomap OctomapSrv;
