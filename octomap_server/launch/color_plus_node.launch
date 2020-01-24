@@ -18,7 +18,7 @@
 
 		<param name="colored_map" value="true" />
 
-		<param name="z_offset" value="100" />
+		<param name="z_offset" value="-100" />
 
 		<!-- data source to integrate (PointCloud2) -->
 		<remap from="cloud_in" to="/r200/depth/points_" />

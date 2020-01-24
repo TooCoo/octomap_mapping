@@ -115,6 +115,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("incremental_2D_projection", m_incrementalUpdate, m_incrementalUpdate);
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
+  // TODO: delete next line
   if (private_nh.getParam("/octomap_server/z_offset", m_zOffset))
   {
       ROS_FATAL("Read z offset param: %f", m_zOffset);
@@ -207,7 +208,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
   m_pointCloudPlusSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_plus_in", 5);
   m_tfPointCloudPlusSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudPlusSub, m_tfListener, m_worldFrameId, 5);
-  m_tfPointCloudPlusSub->registerCallback(boost::bind(&OctomapServer::insertCloudPlusCallback, this, _1));
+  m_tfpointCloudPlusSub->registerCallback(boost::bind(&OctomapServer::insertCloudPlusCallback, this, _1));
 #endif
 
   m_octomapBinaryService = m_nh.advertiseService("octomap_binary", &OctomapServer::octomapBinarySrv, this);
@@ -300,7 +301,7 @@ bool OctomapServer::openFile(const std::string& filename){
 // TODO: This is the thing were the pointcloud gets added to the map
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
   ros::WallTime startTime = ros::WallTime::now();
-
+  ROS_FATAL("Some callback");
   //
   // ground filtering in base frame
   //
@@ -389,27 +390,35 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 }
 
 void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
-    ros::WallTime startTime = ros::WallTime::now();
+    ROS_FATAL("Attempting callback plus!");
+}
 
-    //
-    // ground filtering in base frame
-    //
-    PCLPointCloud pc; // input cloud for filtering and ground-detection
-    pcl::fromROSMsg(*cloud, pc);
+// TODO: uncomment this section
+/*
+void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+        ros::WallTime startTime = ros::WallTime::now();
 
-    tf::StampedTransform sensorToWorldTf;
-    try {
-        m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
-    } catch(tf::TransformException& ex){
-        ROS_ERROR_STREAM( "Transform error of sensor data: " << ex.what() << ", quitting callback");
-        return;
-    }
+        ROS_FATAL("Attempting callback plus!");
 
-    Eigen::Matrix4f sensorToWorld;
-    pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
+        //
+        // ground filtering in base frame
+        //
+        PCLPointCloud pc; // input cloud for filtering and ground-detection
+        pcl::fromROSMsg(*cloud, pc);
+
+        tf::StampedTransform sensorToWorldTf;
+        try {
+            m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
+        } catch(tf::TransformException& ex){
+            ROS_ERROR_STREAM( "Transform error of sensor data: " << ex.what() << ", quitting callback");
+            return;
+        }
+
+        Eigen::Matrix4f sensorToWorld;
+        pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
-    Eigen::Matrix4f mirrorToWorld;
+        Eigen::Matrix4f mirrorToWorld;
 
     mirrorToWorld(0,0) = 1;
     mirrorToWorld(1,1) = 1;
@@ -418,81 +427,82 @@ void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::Cons
     mirrorToWorld(3,2) = m_zOffset;
 #endif
 
-    // set up filter for height range, also removes NANs:
-    pcl::PassThrough<PCLPoint> pass_x;
-    pass_x.setFilterFieldName("x");
-    pass_x.setFilterLimits(m_pointcloudMinX, m_pointcloudMaxX);
-    pcl::PassThrough<PCLPoint> pass_y;
-    pass_y.setFilterFieldName("y");
-    pass_y.setFilterLimits(m_pointcloudMinY, m_pointcloudMaxY);
-    pcl::PassThrough<PCLPoint> pass_z;
-    pass_z.setFilterFieldName("z");
-    pass_z.setFilterLimits(m_pointcloudMinZ, m_pointcloudMaxZ);
+        // set up filter for height range, also removes NANs:
+        pcl::PassThrough<PCLPoint> pass_x;
+        pass_x.setFilterFieldName("x");
+        pass_x.setFilterLimits(m_pointcloudMinX, m_pointcloudMaxX);
+        pcl::PassThrough<PCLPoint> pass_y;
+        pass_y.setFilterFieldName("y");
+        pass_y.setFilterLimits(m_pointcloudMinY, m_pointcloudMaxY);
+        pcl::PassThrough<PCLPoint> pass_z;
+        pass_z.setFilterFieldName("z");
+        pass_z.setFilterLimits(m_pointcloudMinZ, m_pointcloudMaxZ);
 
-    PCLPointCloud pc_ground; // segmented ground plane
-    PCLPointCloud pc_nonground; // everything else
+        PCLPointCloud pc_ground; // segmented ground plane
+        PCLPointCloud pc_nonground; // everything else
 
-    if (m_filterGroundPlane){
-        tf::StampedTransform sensorToBaseTf, baseToWorldTf;
-        try{
-            m_tfListener.waitForTransform(m_baseFrameId, cloud->header.frame_id, cloud->header.stamp, ros::Duration(0.2));
-            m_tfListener.lookupTransform(m_baseFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToBaseTf);
-            m_tfListener.lookupTransform(m_worldFrameId, m_baseFrameId, cloud->header.stamp, baseToWorldTf);
+        if (m_filterGroundPlane){
+            tf::StampedTransform sensorToBaseTf, baseToWorldTf;
+            try{
+                m_tfListener.waitForTransform(m_baseFrameId, cloud->header.frame_id, cloud->header.stamp, ros::Duration(0.2));
+                m_tfListener.lookupTransform(m_baseFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToBaseTf);
+                m_tfListener.lookupTransform(m_worldFrameId, m_baseFrameId, cloud->header.stamp, baseToWorldTf);
 
-        }catch(tf::TransformException& ex){
-            ROS_ERROR_STREAM( "Transform error for ground plane filter: " << ex.what() << ", quitting callback.\n"
-                                                                                          "You need to set the base_frame_id or disable filter_ground.");
-        }
+            }catch(tf::TransformException& ex){
+                ROS_ERROR_STREAM( "Transform error for ground plane filter: " << ex.what() << ", quitting callback.\n"
+                                                                                              "You need to set the base_frame_id or disable filter_ground.");
+            }
 
-        Eigen::Matrix4f sensorToBase, baseToWorld;
-        pcl_ros::transformAsMatrix(sensorToBaseTf, sensorToBase);
-        pcl_ros::transformAsMatrix(baseToWorldTf, baseToWorld);
+            Eigen::Matrix4f sensorToBase, baseToWorld;
+            pcl_ros::transformAsMatrix(sensorToBaseTf, sensorToBase);
+            pcl_ros::transformAsMatrix(baseToWorldTf, baseToWorld);
 
-        // transform pointcloud from sensor frame to fixed robot frame
-        pcl::transformPointCloud(pc, pc, sensorToBase);
-        pass_x.setInputCloud(pc.makeShared());
-        pass_x.filter(pc);
-        pass_y.setInputCloud(pc.makeShared());
-        pass_y.filter(pc);
-        pass_z.setInputCloud(pc.makeShared());
-        pass_z.filter(pc);
-        filterGroundPlane(pc, pc_ground, pc_nonground);
+            // transform pointcloud from sensor frame to fixed robot frame
+            pcl::transformPointCloud(pc, pc, sensorToBase);
+            pass_x.setInputCloud(pc.makeShared());
+            pass_x.filter(pc);
+            pass_y.setInputCloud(pc.makeShared());
+            pass_y.filter(pc);
+            pass_z.setInputCloud(pc.makeShared());
+            pass_z.filter(pc);
+            filterGroundPlane(pc, pc_ground, pc_nonground);
 
-        // transform clouds to world frame for insertion
-        pcl::transformPointCloud(pc_ground, pc_ground, baseToWorld);
-        pcl::transformPointCloud(pc_nonground, pc_nonground, baseToWorld);
-    } else {
-        // directly transform to map frame:
-        pcl::transformPointCloud(pc, pc, sensorToWorld);
+            // transform clouds to world frame for insertion
+            pcl::transformPointCloud(pc_ground, pc_ground, baseToWorld);
+            pcl::transformPointCloud(pc_nonground, pc_nonground, baseToWorld);
+        } else {
+            // directly transform to map frame:
+            pcl::transformPointCloud(pc, pc, sensorToWorld);
 
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
-        // TODO also transform from mirror world to the real world.
+            // TODO also transform from mirror world to the real world.
         pcl::transformPointCloud(pc, pc, mirrorToWorld);
 #endif
 
-        // just filter height range:
-        pass_x.setInputCloud(pc.makeShared());
-        pass_x.filter(pc);
-        pass_y.setInputCloud(pc.makeShared());
-        pass_y.filter(pc);
-        pass_z.setInputCloud(pc.makeShared());
-        pass_z.filter(pc);
+            // just filter height range:
+            pass_x.setInputCloud(pc.makeShared());
+            pass_x.filter(pc);
+            pass_y.setInputCloud(pc.makeShared());
+            pass_y.filter(pc);
+            pass_z.setInputCloud(pc.makeShared());
+            pass_z.filter(pc);
 
-        pc_nonground = pc;
-        // pc_nonground is empty without ground segmentation
-        pc_ground.header = pc.header;
-        pc_nonground.header = pc.header;
+            pc_nonground = pc;
+            // pc_nonground is empty without ground segmentation
+            pc_ground.header = pc.header;
+            pc_nonground.header = pc.header;
+        }
+
+        ROS_FATAL("Attempting an insert scan plus!");
+        insertScanPlus(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
+
+        double total_elapsed = (ros::WallTime::now() - startTime).toSec();
+        ROS_DEBUG("Pointcloud insertion in OctomapServer done (%zu+%zu pts (ground/nonground), %f sec)", pc_ground.size(), pc_nonground.size(), total_elapsed);
+
+        publishAll(cloud->header.stamp);
     }
-
-    ROS_FATAL("Attempting an insert scan plus!");
-    insertScanPlus(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
-
-    double total_elapsed = (ros::WallTime::now() - startTime).toSec();
-    ROS_DEBUG("Pointcloud insertion in OctomapServer done (%zu+%zu pts (ground/nonground), %f sec)", pc_ground.size(), pc_nonground.size(), total_elapsed);
-
-    publishAll(cloud->header.stamp);
-}
+*/
 
 // TODO: this is were scans are insterted
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
@@ -638,6 +648,8 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     #endif
 #endif
 }
+
+
 
 void OctomapServer::insertScanPlus(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
     point3d sensorOrigin = pointTfToOctomap(sensorOriginTf);
