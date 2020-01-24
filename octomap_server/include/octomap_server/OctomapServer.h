@@ -88,15 +88,15 @@ public:
   typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
   typedef octomap::ColorOcTree OcTreeT;
 #else
-#ifdef COLOR_PLUS_OCTOMAP_SERVER
-        typedef pcl::PointXYZRGB PCLPoint;
-        typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
-        typedef octomap::ColorPlusOcTree OcTreeT;
-#else
-  typedef pcl::PointXYZ PCLPoint;
-  typedef pcl::PointCloud<pcl::PointXYZ> PCLPointCloud;
-  typedef octomap::OcTree OcTreeT;
-#endif
+    #ifdef COLOR_PLUS_OCTOMAP_SERVER
+            typedef pcl::PointXYZRGB PCLPoint;
+            typedef pcl::PointCloud<pcl::PointXYZRGB> PCLPointCloud;
+            typedef octomap::ColorPlusOcTree OcTreeT;
+    #else
+      typedef pcl::PointXYZ PCLPoint;
+      typedef pcl::PointCloud<pcl::PointXYZ> PCLPointCloud;
+      typedef octomap::OcTree OcTreeT;
+    #endif
 #endif
 
   typedef octomap_msgs::GetOctomap OctomapSrv;
@@ -218,8 +218,14 @@ protected:
   ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
+
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudPlusSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudPlusSub;
+  double m_zOffset;
+#endif
+
+
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService;
   tf::TransformListener m_tfListener;
   boost::recursive_mutex m_config_mutex;
@@ -275,6 +281,7 @@ protected:
   unsigned m_multires2DScale;
   bool m_projectCompleteMap;
   bool m_useColoredMap;
+
 };
 }
 

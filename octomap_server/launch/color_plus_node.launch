@@ -8,16 +8,20 @@
 -->
 <launch>
 	<node pkg="octomap_server" type="octomap_color_plus_server_node" name="octomap_server">
-		<param name="resolution" value="0.05" />
+		<param name="resolution" value="0.25" />
 		
 		<!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
-		<param name="frame_id" type="string" value="odom_combined" />
+		<param name="frame_id" type="string" value="local_origin" />
 		
 		<!-- maximum range to integrate (speedup!) -->
 		<param name="sensor_model/max_range" value="5.0" />
-		
+
+		<param name="colored_map" value="true" />
+
+		<param name="z_offset" value="100" />
+
 		<!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/r200/depth/points" />
+		<remap from="cloud_in" to="/r200/depth/points_" />
 
 		<!-- data source to integrate (PointCloud2) -->
 		<remap from="cloud_plus_in" to="/mirror/r200/depth/points" />
