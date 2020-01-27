@@ -21,7 +21,7 @@
 		<param name="z_offset" value="-100" />
 
 		<!-- data source to integrate (PointCloud2) -->
-		<remap from="cloud_in" to="/r200/depth/points_" />
+		<remap from="cloud_in" to="/r200/depth/points" />
 
 		<!-- data source to integrate (PointCloud2) -->
 		<remap from="cloud_plus_in" to="/mirror/r200/depth/points" />
