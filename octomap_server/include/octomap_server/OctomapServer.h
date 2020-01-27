@@ -225,7 +225,6 @@ protected:
   double m_zOffset;
 #endif
 
-
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService;
   tf::TransformListener m_tfListener;
   boost::recursive_mutex m_config_mutex;

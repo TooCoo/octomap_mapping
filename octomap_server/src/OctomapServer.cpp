@@ -115,7 +115,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("incremental_2D_projection", m_incrementalUpdate, m_incrementalUpdate);
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
-  // TODO: delete next line
   if (private_nh.getParam("/octomap_server/z_offset", m_zOffset))
   {
       ROS_FATAL("Read z offset param: %f", m_zOffset);
@@ -204,11 +203,11 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_tfPointCloudSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 5);
   m_tfPointCloudSub->registerCallback(boost::bind(&OctomapServer::insertCloudCallback, this, _1));
 
-  // TODO: TF will be wrong here.
+
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
   m_pointCloudPlusSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_plus_in", 5);
   m_tfPointCloudPlusSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudPlusSub, m_tfListener, m_worldFrameId, 5);
-  m_tfpointCloudPlusSub->registerCallback(boost::bind(&OctomapServer::insertCloudPlusCallback, this, _1));
+  m_tfPointCloudPlusSub->registerCallback(boost::bind(&OctomapServer::insertCloudPlusCallback, this, _1));
 #endif
 
   m_octomapBinaryService = m_nh.advertiseService("octomap_binary", &OctomapServer::octomapBinarySrv, this);
@@ -390,12 +389,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 }
 
 void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
-    ROS_FATAL("Attempting callback plus!");
-}
-
-// TODO: uncomment this section
-/*
-void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
         ros::WallTime startTime = ros::WallTime::now();
 
         ROS_FATAL("Attempting callback plus!");
@@ -474,12 +467,6 @@ void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::Cons
             // directly transform to map frame:
             pcl::transformPointCloud(pc, pc, sensorToWorld);
 
-
-#ifdef COLOR_PLUS_OCTOMAP_SERVER
-            // TODO also transform from mirror world to the real world.
-        pcl::transformPointCloud(pc, pc, mirrorToWorld);
-#endif
-
             // just filter height range:
             pass_x.setInputCloud(pc.makeShared());
             pass_x.filter(pc);
@@ -502,7 +489,7 @@ void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::Cons
 
         publishAll(cloud->header.stamp);
     }
-*/
+
 
 // TODO: this is were scans are insterted
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
@@ -715,6 +702,8 @@ void OctomapServer::insertScanPlus(const tf::Point& sensorOriginTf, const PCLPoi
 #else
     #ifdef COLOR_PLUS_OCTOMAP_SERVER // NB: Only read and interpret color if it's an occupied node
                 m_octree->averageNodeLabel(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
+                // TODO: change this to label
+                m_octree->averageNodeColor(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
     #endif
 #endif
             }
