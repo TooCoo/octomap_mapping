@@ -222,7 +222,7 @@ protected:
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudPlusSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudPlusSub;
-  double m_zOffset;
+  bool m_disp_labels;
 #endif
 
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService;

@@ -46,7 +46,7 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
   m_pointCloudPlusSub(NULL),
   m_tfPointCloudPlusSub(NULL),
-  m_zOffset(0.0f),
+  m_disp_labels(false),
 #endif
   m_reconfigureServer(m_config_mutex),
   m_octree(NULL),
@@ -115,13 +115,16 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   private_nh.param("incremental_2D_projection", m_incrementalUpdate, m_incrementalUpdate);
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
-  if (private_nh.getParam("/octomap_server/z_offset", m_zOffset))
+
+  private_nh.param("display_label_colors", m_disp_labels, m_disp_labels);
+
+  if (private_nh.getParam("/octomap_server/disp_labels", m_disp_labels))
   {
-      ROS_FATAL("Read z offset param: %f", m_zOffset);
+      ROS_FATAL("Read disp_labels parameter.");
   }
   else
   {
-      ROS_FATAL("No z offset param found");
+      ROS_FATAL("No disp_labels param found, using default values.");
   }
 #endif
 
@@ -202,7 +205,6 @@ OctomapServer::OctomapServer(ros::NodeHandle private_nh_)
   m_pointCloudSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_in", 5);
   m_tfPointCloudSub = new tf::MessageFilter<sensor_msgs::PointCloud2> (*m_pointCloudSub, m_tfListener, m_worldFrameId, 5);
   m_tfPointCloudSub->registerCallback(boost::bind(&OctomapServer::insertCloudCallback, this, _1));
-
 
 #ifdef COLOR_PLUS_OCTOMAP_SERVER
   m_pointCloudPlusSub = new message_filters::Subscriber<sensor_msgs::PointCloud2> (m_nh, "cloud_plus_in", 5);
@@ -300,7 +302,6 @@ bool OctomapServer::openFile(const std::string& filename){
 // TODO: This is the thing were the pointcloud gets added to the map
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
   ros::WallTime startTime = ros::WallTime::now();
-  ROS_FATAL("Some callback");
   //
   // ground filtering in base frame
   //
@@ -391,8 +392,6 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
 void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
         ros::WallTime startTime = ros::WallTime::now();
 
-        ROS_FATAL("Attempting callback plus!");
-
         //
         // ground filtering in base frame
         //
@@ -409,16 +408,6 @@ void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::Cons
 
         Eigen::Matrix4f sensorToWorld;
         pcl_ros::transformAsMatrix(sensorToWorldTf, sensorToWorld);
-
-#ifdef COLOR_PLUS_OCTOMAP_SERVER
-        Eigen::Matrix4f mirrorToWorld;
-
-    mirrorToWorld(0,0) = 1;
-    mirrorToWorld(1,1) = 1;
-    mirrorToWorld(2,2) = 1;
-    mirrorToWorld(3,3) = 1;
-    mirrorToWorld(3,2) = m_zOffset;
-#endif
 
         // set up filter for height range, also removes NANs:
         pcl::PassThrough<PCLPoint> pass_x;
@@ -481,7 +470,6 @@ void OctomapServer::insertCloudPlusCallback(const sensor_msgs::PointCloud2::Cons
             pc_nonground.header = pc.header;
         }
 
-        ROS_FATAL("Attempting an insert scan plus!");
         insertScanPlus(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
 
         double total_elapsed = (ros::WallTime::now() - startTime).toSec();
@@ -702,8 +690,6 @@ void OctomapServer::insertScanPlus(const tf::Point& sensorOriginTf, const PCLPoi
 #else
     #ifdef COLOR_PLUS_OCTOMAP_SERVER // NB: Only read and interpret color if it's an occupied node
                 m_octree->averageNodeLabel(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
-                // TODO: change this to label
-                m_octree->averageNodeColor(it->x, it->y, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
     #endif
 #endif
             }
@@ -838,14 +824,27 @@ void OctomapServer::publishAll(const ros::Time& rostime){
         double y = it.getY();
 
 #ifdef COLOR_OCTOMAP_SERVER
-          int r = it->getColor().r;
+        int r = it->getColor().r;
         int g = it->getColor().g;
         int b = it->getColor().b;
 #else
     #ifdef COLOR_PLUS_OCTOMAP_SERVER
-          int r = it->getColor().r;
-        int g = it->getColor().g;
-        int b = it->getColor().b;
+
+        int r, g, b;
+
+        if (!m_disp_labels)
+        {
+            r = it->getColor().r;
+            g = it->getColor().g;
+            b = it->getColor().b;
+        }
+        else
+        {
+            r = it->getLabel().r;
+            g = it->getLabel().g;
+            b = it->getLabel().b;
+        }
+
     #endif
 #endif
 
@@ -1462,6 +1461,9 @@ void OctomapServer::reconfigureCallback(octomap_server::OctomapServerConfig& con
     m_filterGroundPlane         = config.filter_ground;
     m_compressMap               = config.compress_map;
     m_incrementalUpdate         = config.incremental_2D_projection;
+#ifdef COLOR_PLUS_OCTOMAP_SERVER
+    m_disp_labels               = config.display_label_colors;
+#endif
 
     // Parameters with a namespace require an special treatment at the beginning, as dynamic reconfigure
     // will overwrite them because the server is not able to match parameters' names.
